@@ -62,11 +62,13 @@ const ChatRoom = ({ channel }) => {
 
     // Clean up function
     return () => {
+      // eslint-disable-next-line
+      const currentRemoteAudioTracks = { ...remoteAudioTracks.current };
       client.current.leave();
       if (localAudioTrack.current) {
         localAudioTrack.current.close();
       }
-      Object.values(remoteAudioTracks.current).forEach((track) => track.stop());
+      Object.values(currentRemoteAudioTracks).forEach((track) => track.stop());
     };
   }, [channel, appId]);
 

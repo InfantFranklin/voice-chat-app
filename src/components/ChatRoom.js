@@ -4,6 +4,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 const ChatRoom = ({ channel }) => {
   const client = useRef(null);
   const localAudioTrack = useRef(null);
+  const remoteAudioTracks = useRef({});
   const appId = process.env.REACT_APP_AGORA_APP_ID;
   console.log("Agora App ID:", appId);
 
@@ -11,8 +12,9 @@ const ChatRoom = ({ channel }) => {
     const init = async () => {
       try {
         client.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        await client.current.join(appId, channel, null, null);
+        const uid = await client.current.join(appId, channel, null, null);
         console.log("Successfully joined the channel:", channel);
+        console.log("Local user ID:", uid);
 
         localAudioTrack.current = await AgoraRTC.createMicrophoneAudioTrack({
           AEC: true, // Acoustic Echo Cancellation
@@ -27,18 +29,24 @@ const ChatRoom = ({ channel }) => {
           await client.current.subscribe(user, mediaType);
           if (mediaType === "audio") {
             const remoteAudioTrack = user.audioTrack;
+            remoteAudioTracks.current[user.uid] = remoteAudioTrack;
             remoteAudioTrack.play();
             console.log(
               "Subscribed to remote audio track from user:",
+              user.uid
+            );
+            console.log(
+              "Remote audio is successfully playing for user:",
               user.uid
             );
           }
         });
 
         client.current.on("user-unpublished", (user) => {
-          const remoteAudioTrack = user.audioTrack;
+          const remoteAudioTrack = remoteAudioTracks.current[user.uid];
           if (remoteAudioTrack) {
             remoteAudioTrack.stop();
+            delete remoteAudioTracks.current[user.uid];
             console.log(
               "Unsubscribed from remote audio track from user:",
               user.uid
@@ -58,8 +66,9 @@ const ChatRoom = ({ channel }) => {
       if (localAudioTrack.current) {
         localAudioTrack.current.close();
       }
+      Object.values(remoteAudioTracks.current).forEach((track) => track.stop());
     };
-  }, [appId, channel]);
+  }, [channel, appId]);
 
   return <div>Connected to {channel}</div>;
 };

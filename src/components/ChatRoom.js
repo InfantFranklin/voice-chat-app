@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 
 const ChatRoom = ({ channel }) => {
@@ -6,6 +6,8 @@ const ChatRoom = ({ channel }) => {
   const localAudioTrack = useRef(null);
   const remoteAudioTracks = useRef({});
   const appId = process.env.REACT_APP_AGORA_APP_ID;
+  const [connectionStatus, setConnectionStatus] = useState("Connecting...");
+  const [userId, setUserId] = useState(null);
   console.log("Agora App ID:", appId);
 
   useEffect(() => {
@@ -14,30 +16,39 @@ const ChatRoom = ({ channel }) => {
         client.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         const uid = await client.current.join(appId, channel, null, null);
         console.log("Successfully joined the channel:", channel);
-        console.log("Local user ID:", uid);
+        console.log("User " + uid + " joined channel: " + channel);
+        setUserId(uid);
+        setConnectionStatus("Connected");
 
-        localAudioTrack.current = await AgoraRTC.createMicrophoneAudioTrack({
-          AEC: true, // Acoustic Echo Cancellation
-          ANS: true, // Automatic Noise Suppression
-        });
-        console.log("Local audio track created");
+        try {
+          localAudioTrack.current = await AgoraRTC.createMicrophoneAudioTrack({
+            AEC: true, // Acoustic Echo Cancellation
+            ANS: true, // Automatic Noise Suppression
+          });
+          console.log("Local audio track created");
 
-        await client.current.publish([localAudioTrack.current]);
-        console.log("Local audio track published");
+          await client.current.publish([localAudioTrack.current]);
+          console.log("Local audio track published");
+        } catch (publishError) {
+          console.error("Failed to publish local audio track: ", publishError);
+        }
 
         client.current.on("user-published", async (user, mediaType) => {
-          await client.current.subscribe(user, mediaType);
-          if (mediaType === "audio") {
-            const remoteAudioTrack = user.audioTrack;
-            remoteAudioTracks.current[user.uid] = remoteAudioTrack;
-            remoteAudioTrack.play();
-            console.log(
-              "Subscribed to remote audio track from user:",
-              user.uid
-            );
-            console.log(
-              "Remote audio is successfully playing for user:",
-              user.uid
+          try {
+            await client.current.subscribe(user, mediaType);
+            if (mediaType === "audio") {
+              const remoteAudioTrack = user.audioTrack;
+              remoteAudioTracks.current[user.uid] = remoteAudioTrack;
+              await remoteAudioTrack.play();
+              console.log(
+                "Subscribed to remote audio track from user:",
+                user.uid
+              );
+            }
+          } catch (subscribeError) {
+            console.error(
+              "Failed to subscribe to remote user:",
+              subscribeError
             );
           }
         });
@@ -55,6 +66,7 @@ const ChatRoom = ({ channel }) => {
         });
       } catch (error) {
         console.error("Failed to join channel:", error);
+        setConnectionStatus("Failed to connect");
       }
     };
 
@@ -72,7 +84,12 @@ const ChatRoom = ({ channel }) => {
     };
   }, [channel, appId]);
 
-  return <div>Connected to {channel}</div>;
+  return (
+    <div>
+      {connectionStatus}: {connectionStatus} to {channel} <br />
+      User ID: {userId ? userId : "Loading..."}
+    </div>
+  );
 };
 
 export default ChatRoom;

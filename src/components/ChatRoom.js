@@ -39,7 +39,7 @@ useEffect(() => {
           await client.current.subscribe(user, mediaType);
           if (mediaType === "audio") {
             const remoteAudioTrack = user.audioTrack;
-            remoteAudioTracks.current[user.uid] = remoteAudioTrack;
+            // remoteAudioTracks.current[user.uid] = remoteAudioTrack;
             await remoteAudioTrack.play();
             console.log(
               "Subscribed to remote audio track from user:",

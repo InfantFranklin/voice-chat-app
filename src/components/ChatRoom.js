@@ -14,6 +14,8 @@ useEffect(() => {
   const init = async () => {
     try {
       client.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+      // Attempt to join the channel
       const uid = await client.current.join(appId, channel, null, null);
       console.log("Successfully joined the channel:", channel);
       console.log("User " + uid + " joined channel: " + channel);
@@ -21,10 +23,7 @@ useEffect(() => {
       setConnectionStatus("Connected");
 
       try {
-        localAudioTrack.current = await AgoraRTC.createMicrophoneAudioTrack({
-          AEC: true, // Acoustic Echo Cancellation
-          ANS: true, // Automatic Noise Suppression
-        });
+        localAudioTrack.current = await AgoraRTC.createMicrophoneAudioTrack();
         console.log("Local audio track created");
 
         await client.current.publish([localAudioTrack.current]);
@@ -39,7 +38,7 @@ useEffect(() => {
           await client.current.subscribe(user, mediaType);
           if (mediaType === "audio") {
             const remoteAudioTrack = user.audioTrack;
-            // remoteAudioTracks.current[user.uid] = remoteAudioTrack;
+            remoteAudioTracks.current[user.uid] = remoteAudioTrack;
             await remoteAudioTrack.play();
             console.log(
               "Subscribed to remote audio track from user:",
@@ -51,28 +50,29 @@ useEffect(() => {
         }
       });
 
-      // client.current.on("user-unpublished", (user) => {
-      //   console.log("User unpublished:", user.uid);
-      //   const remoteAudioTrack = remoteAudioTracks.current[user.uid];
-      //   if (remoteAudioTrack) {
-      //     remoteAudioTrack.stop();
-      //     delete remoteAudioTracks.current[user.uid];
-      //     console.log(
-      //       "Unsubscribed from remote audio track from user:",
-      //       user.uid
-      //     );
-      //   }
-      // });
+      client.current.on("user-unpublished", (user) => {
+        console.log("User unpublished:", user.uid);
+        const remoteAudioTrack = remoteAudioTracks.current[user.uid];
+        if (remoteAudioTrack) {
+          remoteAudioTrack.stop();
+          delete remoteAudioTracks.current[user.uid];
+          console.log(
+            "Unsubscribed from remote audio track from user:",
+            user.uid
+          );
+        }
+      });
     } catch (error) {
       console.error("Failed to join channel:", error);
       setConnectionStatus("Failed to connect");
+      // You can display a user-friendly message or retry logic here
     }
   };
 
   init();
 
-  // Clean up function
   return () => {
+    // Clean up function
     // eslint-disable-next-line
     const currentRemoteAudioTracks = { ...remoteAudioTracks.current };
     client.current

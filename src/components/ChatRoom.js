@@ -51,18 +51,18 @@ useEffect(() => {
         }
       });
 
-      client.current.on("user-unpublished", (user) => {
-        console.log("User unpublished:", user.uid);
-        const remoteAudioTrack = remoteAudioTracks.current[user.uid];
-        if (remoteAudioTrack) {
-          remoteAudioTrack.stop();
-          delete remoteAudioTracks.current[user.uid];
-          console.log(
-            "Unsubscribed from remote audio track from user:",
-            user.uid
-          );
-        }
-      });
+      // client.current.on("user-unpublished", (user) => {
+      //   console.log("User unpublished:", user.uid);
+      //   const remoteAudioTrack = remoteAudioTracks.current[user.uid];
+      //   if (remoteAudioTrack) {
+      //     remoteAudioTrack.stop();
+      //     delete remoteAudioTracks.current[user.uid];
+      //     console.log(
+      //       "Unsubscribed from remote audio track from user:",
+      //       user.uid
+      //     );
+      //   }
+      // });
     } catch (error) {
       console.error("Failed to join channel:", error);
       setConnectionStatus("Failed to connect");
